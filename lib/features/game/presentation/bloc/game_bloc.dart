@@ -1,8 +1,9 @@
 /// File: lib/features/game/presentation/bloc/game_bloc.dart
-/// Bloc untuk manage game state dan logic
+/// Bloc untuk manage game state dan logic (COMPLETE VERSION)
 
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sudoku_game/features/game/domain/entities/move_entity.dart';
 import 'package:sudoku_game/features/game/domain/usecases/validate_puzzle.dart';
 
 import '../../../../core/error/failures.dart';
@@ -81,17 +82,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         emit(GameError(message: _mapFailureToMessage(failure)));
       },
       (puzzle) {
-        // Create new game state
         final gameState = GameStateModel.newGame(
           gameId: 'game_${DateTime.now().millisecondsSinceEpoch}',
-          userId: 'user_temp', // Will be set from AuthBloc
+          userId: 'user_temp',
           puzzle: puzzle as PuzzleModel,
         );
 
         logger.i('Game started: ${gameState.gameId}', tag: 'GameBloc');
         emit(GameLoaded(gameState: gameState));
 
-        // Auto-save
         add(const GameSaveEvent(saveToFirestore: false));
       },
     );
@@ -140,7 +139,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final col = event.cellIndex % 9;
     final cell = currentState.board[row][col];
 
-    // Don't select fixed cells
     if (cell.isFixed) return;
 
     final updatedState = currentState.copyWith(
@@ -160,26 +158,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final currentState = (state as GameLoaded).gameState as GameStateModel;
     
-    // Check if cell selected
     if (currentState.selectedCellIndex == null) return;
 
     final row = currentState.selectedCellIndex! ~/ 9;
     final col = currentState.selectedCellIndex! % 9;
     final cell = currentState.board[row][col] as CellModel;
 
-    // Don't modify fixed cells
     if (cell.isFixed) return;
 
-    // If note mode, toggle note instead
     if (currentState.isNoteMode) {
       add(GameToggleNoteEvent(number: event.number));
       return;
     }
 
-    // Get current board for validation
     final boardForValidation = _getBoardAsNullableList(currentState.board);
 
-    // Validate move
     final validationResult = await validateMove(
       ValidateMoveParams(
         board: boardForValidation,
@@ -191,7 +184,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final isValid = validationResult.getOrElse(() => false);
 
-    // Create move
     final move = MoveModel.valueMove(
       row: row,
       column: col,
@@ -199,17 +191,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       newValue: event.number,
     );
 
-    // Update cell
     final updatedCell = cell.setValue(event.number).setError(!isValid);
     final updatedBoard = _updateBoard(currentState.board, row, col, updatedCell);
 
-    // Update move history
     final updatedHistory = [
       ...currentState.moveHistory.take(currentState.currentMoveIndex + 1),
       move,
     ];
 
-    // Update game state
     final updatedState = currentState.copyWith(
       board: updatedBoard,
       moveHistory: updatedHistory,
@@ -219,10 +208,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     emit(GameLoaded(gameState: updatedState));
 
-    // Auto-save
     add(const GameSaveEvent(saveToFirestore: false));
-
-    // Check completion
     add(const GameCheckCompletionEvent());
   }
 
@@ -244,7 +230,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     if (cell.isFixed || cell.isEmpty) return;
 
-    // Create move
     final move = MoveModel.eraseMove(
       row: row,
       column: col,
@@ -252,17 +237,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       previousNotes: cell.notes,
     );
 
-    // Update cell
     final updatedCell = cell.clearValue();
     final updatedBoard = _updateBoard(currentState.board, row, col, updatedCell);
 
-    // Update move history
     final updatedHistory = [
       ...currentState.moveHistory.take(currentState.currentMoveIndex + 1),
       move,
     ];
 
-    // Update game state
     final updatedState = currentState.copyWith(
       board: updatedBoard,
       moveHistory: updatedHistory,
@@ -271,7 +253,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     emit(GameLoaded(gameState: updatedState));
 
-    // Auto-save
     add(const GameSaveEvent(saveToFirestore: false));
   }
 
@@ -309,7 +290,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     if (cell.isFixed || cell.isFilled) return;
 
-    // Create move
     final move = MoveModel.noteMove(
       row: row,
       column: col,
@@ -317,17 +297,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       newNotes: cell.toggleNote(event.number).notes,
     );
 
-    // Update cell
     final updatedCell = cell.toggleNote(event.number);
     final updatedBoard = _updateBoard(currentState.board, row, col, updatedCell);
 
-    // Update move history
     final updatedHistory = [
       ...currentState.moveHistory.take(currentState.currentMoveIndex + 1),
       move,
     ];
 
-    // Update game state
     final updatedState = currentState.copyWith(
       board: updatedBoard,
       moveHistory: updatedHistory,
@@ -337,14 +314,380 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(GameLoaded(gameState: updatedState));
   }
 
+  // ========== REQUEST HINT ==========
+
+  Future<void> _onRequestHint(
+    GameRequestHintEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    // Check hints remaining
+    if (currentState.hintsRemaining <= 0) {
+      emit(GameNoHintsRemaining(gameState: currentState));
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!isClosed && state is GameNoHintsRemaining) {
+          emit(GameLoaded(gameState: currentState));
+        }
+      });
+      return;
+    }
+
+    if (currentState.selectedCellIndex == null) return;
+
+    final row = currentState.selectedCellIndex! ~/ 9;
+    final col = currentState.selectedCellIndex! % 9;
+    final cell = currentState.board[row][col];
+
+    if (cell.isFixed || cell.isFilled) return;
+
+    final boardForHint = _getBoardAsNullableList(currentState.board);
+    final solution = _getSolutionAsList(currentState.puzzle);
+
+    final hintResult = await getHint(
+      GetHintParams(
+        currentBoard: boardForHint,
+        solution: solution,
+        row: row,
+        col: col, board: [],
+      ),
+    );
+
+    hintResult.fold(
+      (failure) {
+        logger.e('Get hint failed: ${failure.message}', tag: 'GameBloc');
+        emit(GameError(message: _mapFailureToMessage(failure)));
+      },
+      (hintValue) {
+        final move = MoveModel.hintMove(
+          row: row,
+          column: col,
+          previousValue: cell.value,
+          newValue: hintValue,
+        );
+
+        final updatedCell = (cell as CellModel).setValue(hintValue);
+        final updatedBoard = _updateBoard(currentState.board, row, col, updatedCell);
+
+        final updatedHistory = [
+          ...currentState.moveHistory.take(currentState.currentMoveIndex + 1),
+          move,
+        ];
+
+        final updatedState = currentState.copyWith(
+          board: updatedBoard,
+          moveHistory: updatedHistory,
+          currentMoveIndex: updatedHistory.length - 1,
+          hintsUsed: currentState.hintsUsed + 1,
+          hintsRemaining: currentState.hintsRemaining - 1,
+        );
+
+        emit(GameHintShown(
+          gameState: updatedState,
+          row: row,
+          col: col,
+          hintValue: hintValue,
+        ));
+
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (!isClosed) {
+            emit(GameLoaded(gameState: updatedState));
+            add(const GameSaveEvent(saveToFirestore: false));
+            add(const GameCheckCompletionEvent());
+          }
+        });
+      },
+    );
+  }
+
+  // ========== UNDO ==========
+
+  Future<void> _onUndo(
+    GameUndoEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    if (!currentState.canUndo) return;
+
+    final move = currentState.moveHistory[currentState.currentMoveIndex];
+    final row = move.row;
+    final col = move.column;
+    final cell = currentState.board[row][col] as CellModel;
+
+    CellModel updatedCell;
+    if (move.type == MoveType.note) {
+      updatedCell = cell.copyWith(notes: move.previousNotes);
+    } else {
+      updatedCell = cell.copyWith(
+        value: move.previousValue,
+        isError: false,
+        notes: move.previousNotes,
+      );
+    }
+
+    final updatedBoard = _updateBoard(currentState.board, row, col, updatedCell);
+
+    final updatedState = currentState.copyWith(
+      board: updatedBoard,
+      currentMoveIndex: currentState.currentMoveIndex - 1,
+    );
+
+    emit(GameLoaded(gameState: updatedState));
+
+    add(const GameSaveEvent(saveToFirestore: false));
+  }
+
+  // ========== REDO ==========
+
+  Future<void> _onRedo(
+    GameRedoEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    if (!currentState.canRedo) return;
+
+    final move = currentState.moveHistory[currentState.currentMoveIndex + 1];
+    final row = move.row;
+    final col = move.column;
+    final cell = currentState.board[row][col] as CellModel;
+
+    CellModel updatedCell;
+    if (move.type == MoveType.note) {
+      updatedCell = cell.copyWith(notes: move.newNotes);
+    } else {
+      updatedCell = cell.copyWith(
+        value: move.newValue,
+        notes: move.newNotes,
+      );
+    }
+
+    final updatedBoard = _updateBoard(currentState.board, row, col, updatedCell);
+
+    final updatedState = currentState.copyWith(
+      board: updatedBoard,
+      currentMoveIndex: currentState.currentMoveIndex + 1,
+    );
+
+    emit(GameLoaded(gameState: updatedState));
+
+    add(const GameSaveEvent(saveToFirestore: false));
+  }
+
+  // ========== PAUSE ==========
+
+  Future<void> _onPause(
+    GamePauseEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    final updatedState = currentState.copyWith(
+      status: GameStatus.paused,
+    );
+
+    emit(GamePaused(gameState: updatedState));
+
+    add(const GameSaveEvent(saveToFirestore: false));
+  }
+
+  // ========== RESUME ==========
+
+  Future<void> _onResume(
+    GameResumeEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GamePaused) return;
+
+    final currentState = (state as GamePaused).gameState as GameStateModel;
+
+    final updatedState = currentState.copyWith(
+      status: GameStatus.playing,
+    );
+
+    emit(GameLoaded(gameState: updatedState));
+  }
+
+  // ========== SAVE ==========
+
+  Future<void> _onSave(
+    GameSaveEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded && state is! GamePaused) return;
+
+    final currentState = state is GameLoaded
+        ? (state as GameLoaded).gameState
+        : (state as GamePaused).gameState;
+
+    final result = await saveGame(
+      SaveGameParams(
+        gameState: currentState,
+        saveToFirestore: event.saveToFirestore,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        logger.w('Save game failed: ${failure.message}', tag: 'GameBloc');
+      },
+      (_) {
+        logger.d('Game saved successfully', tag: 'GameBloc');
+      },
+    );
+  }
+
+  // ========== CHECK COMPLETION ==========
+
+  Future<void> _onCheckCompletion(
+    GameCheckCompletionEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    final currentBoard = _getBoardAsNullableList(currentState.board);
+    final solution = _getSolutionAsList(currentState.puzzle);
+
+    final result = await checkCompletion(
+      CheckCompletionParams(
+        currentBoard: currentBoard,
+        solution: solution,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        logger.e('Check completion failed: ${failure.message}', tag: 'GameBloc');
+      },
+      (isComplete) {
+        if (isComplete) {
+          final completedState = currentState.copyWith(
+            isCompleted: true,
+            completedTime: DateTime.now(),
+            status: GameStatus.completed,
+          );
+
+          emit(GameCompleted(
+            gameState: completedState,
+            finalTime: completedState.timeElapsed,
+            hintsUsed: completedState.hintsUsed,
+            errorsMade: completedState.errorsMade,
+            accuracy: completedState.accuracy,
+          ));
+
+          add(const GameSaveEvent(saveToFirestore: true));
+        }
+      },
+    );
+  }
+
+  // ========== RESTART ==========
+
+  Future<void> _onRestart(
+    GameRestartEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded && state is! GamePaused) return;
+
+    final currentState = state is GameLoaded
+        ? (state as GameLoaded).gameState as GameStateModel
+        : (state as GamePaused).gameState as GameStateModel;
+
+    final newGameState = GameStateModel.newGame(
+      gameId: 'game_${DateTime.now().millisecondsSinceEpoch}',
+      userId: currentState.userId,
+      puzzle: currentState.puzzle as PuzzleModel,
+    );
+
+    emit(GameLoaded(gameState: newGameState));
+
+    add(const GameSaveEvent(saveToFirestore: false));
+  }
+
+  // ========== VALIDATE ALL ==========
+
+  Future<void> _onValidateAll(
+    GameValidateAllEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+    final solution = _getSolutionAsList(currentState.puzzle);
+
+    var updatedBoard = currentState.board;
+
+    for (int row = 0; row < 9; row++) {
+      for (int col = 0; col < 9; col++) {
+        final cell = updatedBoard[row][col] as CellModel;
+        if (!cell.isFixed && cell.isFilled) {
+          final isCorrect = cell.value == solution[row][col];
+          final updatedCell = cell.setError(!isCorrect);
+          updatedBoard = _updateBoard(updatedBoard, row, col, updatedCell);
+        }
+      }
+    }
+
+    final updatedState = currentState.copyWith(board: updatedBoard);
+    emit(GameLoaded(gameState: updatedState));
+  }
+
+  // ========== UPDATE TIME ==========
+
+  Future<void> _onUpdateTime(
+    GameUpdateTimeEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    final updatedState = currentState.copyWith(
+      timeElapsed: event.seconds,
+    );
+
+    emit(GameLoaded(gameState: updatedState));
+  }
+
+  // ========== CLEAR SELECTION ==========
+
+  Future<void> _onClearSelection(
+    GameClearSelectionEvent event,
+    Emitter<GameState> emit,
+  ) async {
+    if (state is! GameLoaded) return;
+
+    final currentState = (state as GameLoaded).gameState as GameStateModel;
+
+    final updatedState = currentState.copyWith(clearSelectedCell: true);
+
+    emit(GameLoaded(gameState: updatedState));
+  }
+
   // ========== HELPER METHODS ==========
 
-  /// Convert board to nullable list for validation
   List<List<int?>> _getBoardAsNullableList(List<List<CellEntity>> board) {
     return board.map((row) => row.map((cell) => cell.value).toList()).toList();
   }
 
-  /// Update board with new cell
+  List<List<int>> _getSolutionAsList(dynamic puzzle) {
+    if (puzzle is PuzzleModel) {
+      return puzzle.solution;
+    }
+    return [];
+  }
+
   List<List<CellEntity>> _updateBoard(
     List<List<CellEntity>> board,
     int row,
@@ -358,7 +701,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     return newBoard;
   }
 
-  /// Map Failure to user-friendly message
   String _mapFailureToMessage(Failure failure) {
     if (failure is NetworkFailure) {
       return 'Tidak ada koneksi internet';
