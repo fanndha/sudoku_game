@@ -2,7 +2,8 @@
 /// BLoC untuk Profile
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:sudoku_game/features/profile/presentation/bloc/profile_event.dart' as event;
+import 'package:sudoku_game/features/profile/presentation/bloc/profile_event.dart'
+    as event;
 import 'package:sudoku_game/features/profile/presentation/bloc/profile_state.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/utils/logger.dart';
@@ -54,23 +55,29 @@ class ProfileBloc extends Bloc<event.ProfileEvent, ProfileState> {
       );
 
       if (failure != null) {
-        logger.e('Failed to load profile: ${failure.message}', tag: 'ProfileBloc');
-        emit(ProfileError(
-          message: _mapFailureToMessage(failure),
-          code: failure.code,
-        ));
+        logger.e(
+          'Failed to load profile: ${failure.message}',
+          tag: 'ProfileBloc',
+        );
+        emit(
+          ProfileError(
+            message: _mapFailureToMessage(failure),
+            code: failure.code,
+          ),
+        );
       }
       return;
     }
 
-    final stats = statsResult.getOrElse(() => throw Exception('Stats not found'));
-    final achievements = achievementsResult.getOrElse(() => throw Exception('Achievements not found'));
+    final stats = statsResult.getOrElse(
+      () => throw Exception('Stats not found'),
+    );
+    final achievements = achievementsResult.getOrElse(
+      () => throw Exception('Achievements not found'),
+    );
 
     logger.i('Profile loaded successfully', tag: 'ProfileBloc');
-    emit(ProfileLoaded(
-      stats: stats,
-      achievements: achievements,
-    ));
+    emit(ProfileLoaded(stats: stats, achievements: achievements));
   }
 
   /// Refresh User Stats
@@ -91,28 +98,32 @@ class ProfileBloc extends Bloc<event.ProfileEvent, ProfileState> {
 
     final currentState = state;
     if (currentState is ProfileLoaded) {
-      emit(ProfileUpdating(
-        currentStats: currentState.stats,
-        currentAchievements: currentState.achievements,
-      ));
+      emit(
+        ProfileUpdating(
+          currentStats: currentState.stats,
+          currentAchievements: currentState.achievements,
+        ),
+      );
     }
 
     final result = await updateUserStats(
-      usecase.UpdateUserStatsParams(
-        userId: event.userId,
-        stats: event.stats,
-      ),
+      usecase.UpdateUserStatsParams(userId: event.userId, stats: event.stats),
     );
 
     result.fold(
       (failure) {
-        logger.e('Failed to update stats: ${failure.message}', tag: 'ProfileBloc');
+        logger.e(
+          'Failed to update stats: ${failure.message}',
+          tag: 'ProfileBloc',
+        );
         if (currentState is ProfileLoaded) {
-          emit(ProfileUpdateError(
-            message: _mapFailureToMessage(failure),
-            currentStats: currentState.stats,
-            currentAchievements: currentState.achievements,
-          ));
+          emit(
+            ProfileUpdateError(
+              message: _mapFailureToMessage(failure),
+              currentStats: currentState.stats,
+              currentAchievements: currentState.achievements,
+            ),
+          );
         } else {
           emit(ProfileError(message: _mapFailureToMessage(failure)));
         }
@@ -141,10 +152,16 @@ class ProfileBloc extends Bloc<event.ProfileEvent, ProfileState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to load achievements: ${failure.message}', tag: 'ProfileBloc');
+        logger.e(
+          'Failed to load achievements: ${failure.message}',
+          tag: 'ProfileBloc',
+        );
       },
       (achievements) {
-        logger.i('Achievements loaded: ${achievements.length}', tag: 'ProfileBloc');
+        logger.i(
+          'Achievements loaded: ${achievements.length}',
+          tag: 'ProfileBloc',
+        );
         emit(currentState.copyWith(achievements: achievements));
       },
     );
@@ -169,21 +186,31 @@ class ProfileBloc extends Bloc<event.ProfileEvent, ProfileState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to unlock achievement: ${failure.message}', tag: 'ProfileBloc');
-        emit(ProfileUpdateError(
-          message: _mapFailureToMessage(failure),
-          currentStats: currentState.stats,
-          currentAchievements: currentState.achievements,
-        ));
+        logger.e(
+          'Failed to unlock achievement: ${failure.message}',
+          tag: 'ProfileBloc',
+        );
+        emit(
+          ProfileUpdateError(
+            message: _mapFailureToMessage(failure),
+            currentStats: currentState.stats,
+            currentAchievements: currentState.achievements,
+          ),
+        );
       },
       (achievement) {
-        logger.i('Achievement unlocked: ${achievement.name}', tag: 'ProfileBloc');
+        logger.i(
+          'Achievement unlocked: ${achievement.name}',
+          tag: 'ProfileBloc',
+        );
 
-        emit(AchievementUnlocked(
-          achievement: achievement,
-          currentStats: currentState.stats,
-          currentAchievements: currentState.achievements,
-        ));
+        emit(
+          AchievementUnlocked(
+            achievement: achievement,
+            currentStats: currentState.stats,
+            currentAchievements: currentState.achievements,
+          ),
+        );
 
         Future.delayed(const Duration(milliseconds: 500), () {
           add(event.event.LoadUserStats(event.userId));
