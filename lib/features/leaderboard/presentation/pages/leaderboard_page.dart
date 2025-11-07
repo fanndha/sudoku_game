@@ -17,9 +17,9 @@ class LeaderboardPage extends StatefulWidget {
   final String initialDifficulty;
 
   const LeaderboardPage({
-    Key? key,
+    super.key,
     this.initialDifficulty = 'easy',
-  }) : super(key: key);
+  });
 
   @override
   State<LeaderboardPage> createState() => _LeaderboardPageState();
