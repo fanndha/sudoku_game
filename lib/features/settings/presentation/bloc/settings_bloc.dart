@@ -55,11 +55,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to load settings: ${failure.message}', tag: 'SettingsBloc');
-        emit(SettingsError(
-          message: _mapFailureToMessage(failure),
-          code: failure.code,
-        ));
+        logger.e(
+          'Failed to load settings: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
+        emit(
+          SettingsError(
+            message: _mapFailureToMessage(failure),
+            code: failure.code,
+          ),
+        );
       },
       (settings) {
         logger.i('Settings loaded', tag: 'SettingsBloc');
@@ -78,11 +83,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     final currentState = state;
     if (currentState is! SettingsLoaded) return;
 
-    final result = await toggleTheme(ToggleThemeParams(themeMode: event.themeMode));
+    final result = await toggleTheme(
+      ToggleThemeParams(themeMode: event.themeMode),
+    );
 
     result.fold(
       (failure) {
-        logger.e('Failed to change theme: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to change theme: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
@@ -107,7 +117,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle sound: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle sound: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
@@ -132,7 +145,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle music: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle music: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
@@ -162,7 +178,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle vibration: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle vibration: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
@@ -191,7 +210,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to update sound volume: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to update sound volume: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
       },
       (_) {
         logger.i('Sound volume updated: ${event.volume}', tag: 'SettingsBloc');
@@ -218,7 +240,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to update music volume: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to update music volume: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
       },
       (_) {
         logger.i('Music volume updated: ${event.volume}', tag: 'SettingsBloc');
@@ -245,12 +270,18 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle auto validate: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle auto validate: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
       (_) {
-        logger.i('Auto validate toggled: ${event.enabled}', tag: 'SettingsBloc');
+        logger.i(
+          'Auto validate toggled: ${event.enabled}',
+          tag: 'SettingsBloc',
+        );
         add(const LoadSettings());
       },
     );
@@ -274,12 +305,18 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle error highlight: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle error highlight: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
       (_) {
-        logger.i('Error highlight toggled: ${event.enabled}', tag: 'SettingsBloc');
+        logger.i(
+          'Error highlight toggled: ${event.enabled}',
+          tag: 'SettingsBloc',
+        );
         add(const LoadSettings());
       },
     );
@@ -303,7 +340,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle timer: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle timer: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
@@ -325,19 +365,27 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     if (currentState is! SettingsLoaded) return;
 
     final updatedSettings = UpdateSettingsParams(
-      settings: currentState.settings.copyWith(notificationsEnabled: event.enabled),
+      settings: currentState.settings.copyWith(
+        notificationsEnabled: event.enabled,
+      ),
     );
 
     final result = await updateSettings(updatedSettings);
 
     result.fold(
       (failure) {
-        logger.e('Failed to toggle notifications: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to toggle notifications: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
       (_) {
-        logger.i('Notifications toggled: ${event.enabled}', tag: 'SettingsBloc');
+        logger.i(
+          'Notifications toggled: ${event.enabled}',
+          tag: 'SettingsBloc',
+        );
         add(const LoadSettings());
       },
     );
@@ -361,7 +409,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     result.fold(
       (failure) {
-        logger.e('Failed to change language: ${failure.message}', tag: 'SettingsBloc');
+        logger.e(
+          'Failed to change language: ${failure.message}',
+          tag: 'SettingsBloc',
+        );
         emit(SettingsError(message: _mapFailureToMessage(failure)));
         emit(currentState);
       },
@@ -426,8 +477,10 @@ extension SettingsEntityCopyWith on SettingsEntity {
       timerEnabled: timerEnabled ?? this.timerEnabled,
       notesEnabled: notesEnabled ?? this.notesEnabled,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      dailyChallengeReminder: dailyChallengeReminder ?? this.dailyChallengeReminder,
-      achievementNotifications: achievementNotifications ?? this.achievementNotifications,
+      dailyChallengeReminder:
+          dailyChallengeReminder ?? this.dailyChallengeReminder,
+      achievementNotifications:
+          achievementNotifications ?? this.achievementNotifications,
       language: language ?? this.language,
       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
       autoSave: autoSave ?? this.autoSave,
