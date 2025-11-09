@@ -25,10 +25,14 @@ class AdsRepositoryImpl implements AdsRepository {
       logger.e('Ad exception: ${e.message}', tag: 'AdsRepository');
       return Left(AdFailure(message: e.message));
     } catch (e) {
-      logger.e('Unknown error initializing ads', error: e, tag: 'AdsRepository');
-      return Left(UnknownFailure(
-        message: 'Gagal menginisialisasi ads: ${e.toString()}',
-      ));
+      logger.e(
+        'Unknown error initializing ads',
+        error: e,
+        tag: 'AdsRepository',
+      );
+      return Left(
+        UnknownFailure(message: 'Gagal menginisialisasi ads: ${e.toString()}'),
+      );
     }
   }
 
@@ -43,10 +47,14 @@ class AdsRepositoryImpl implements AdsRepository {
       logger.e('Failed to load banner ad: ${e.message}', tag: 'AdsRepository');
       return Left(AdFailedToLoadFailure(message: e.message));
     } catch (e) {
-      logger.e('Unknown error loading banner ad', error: e, tag: 'AdsRepository');
-      return Left(UnknownFailure(
-        message: 'Gagal memuat banner ad: ${e.toString()}',
-      ));
+      logger.e(
+        'Unknown error loading banner ad',
+        error: e,
+        tag: 'AdsRepository',
+      );
+      return Left(
+        UnknownFailure(message: 'Gagal memuat banner ad: ${e.toString()}'),
+      );
     }
   }
 
@@ -54,7 +62,7 @@ class AdsRepositoryImpl implements AdsRepository {
   Future<Either<Failure, void>> showInterstitialAd() async {
     try {
       logger.i('Showing interstitial ad', tag: 'AdsRepository');
-      
+
       // Check if user is premium
       final isPremium = await isPremiumUser();
       if (isPremium.isRight() && isPremium.getOrElse(() => false)) {
@@ -80,10 +88,14 @@ class AdsRepositoryImpl implements AdsRepository {
       logger.e('Failed to show ad: ${e.message}', tag: 'AdsRepository');
       return Left(AdFailedToShowFailure(message: e.message));
     } catch (e) {
-      logger.e('Unknown error showing interstitial ad', error: e, tag: 'AdsRepository');
-      return Left(UnknownFailure(
-        message: 'Gagal menampilkan iklan: ${e.toString()}',
-      ));
+      logger.e(
+        'Unknown error showing interstitial ad',
+        error: e,
+        tag: 'AdsRepository',
+      );
+      return Left(
+        UnknownFailure(message: 'Gagal menampilkan iklan: ${e.toString()}'),
+      );
     }
   }
 
@@ -101,7 +113,10 @@ class AdsRepositoryImpl implements AdsRepository {
       }
 
       final rewardEarned = await dataSource.showRewardedAd();
-      logger.i('Rewarded ad shown, reward earned: $rewardEarned', tag: 'AdsRepository');
+      logger.i(
+        'Rewarded ad shown, reward earned: $rewardEarned',
+        tag: 'AdsRepository',
+      );
       return Right(rewardEarned);
     } on AdNotAvailableException catch (e) {
       logger.w('Ad not available: ${e.message}', tag: 'AdsRepository');
@@ -110,10 +125,14 @@ class AdsRepositoryImpl implements AdsRepository {
       logger.e('Failed to show ad: ${e.message}', tag: 'AdsRepository');
       return Left(AdFailedToShowFailure(message: e.message));
     } catch (e) {
-      logger.e('Unknown error showing rewarded ad', error: e, tag: 'AdsRepository');
-      return Left(UnknownFailure(
-        message: 'Gagal menampilkan iklan: ${e.toString()}',
-      ));
+      logger.e(
+        'Unknown error showing rewarded ad',
+        error: e,
+        tag: 'AdsRepository',
+      );
+      return Left(
+        UnknownFailure(message: 'Gagal menampilkan iklan: ${e.toString()}'),
+      );
     }
   }
 
@@ -125,9 +144,9 @@ class AdsRepositoryImpl implements AdsRepository {
       return const Right(null);
     } catch (e) {
       logger.e('Error disposing banner ad', error: e, tag: 'AdsRepository');
-      return Left(UnknownFailure(
-        message: 'Gagal dispose banner ad: ${e.toString()}',
-      ));
+      return Left(
+        UnknownFailure(message: 'Gagal dispose banner ad: ${e.toString()}'),
+      );
     }
   }
 
