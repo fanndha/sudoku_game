@@ -11,11 +11,11 @@ class DailyChallengeBanner extends StatelessWidget {
   final bool compact;
 
   const DailyChallengeBanner({
-    Key? key,
+    super.key,
     required this.challenge,
     required this.onTap,
     this.compact = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -168,10 +168,10 @@ class SimpleDailyChallengeBanner extends StatelessWidget {
   final VoidCallback onTap;
 
   const SimpleDailyChallengeBanner({
-    Key? key,
+    super.key,
     required this.isCompleted,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
